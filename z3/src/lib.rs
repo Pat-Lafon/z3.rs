@@ -13,7 +13,7 @@ extern crate z3_sys;
 #[cfg(feature = "arbitrary-size-numeral")]
 extern crate num;
 
-use std::ffi::CString;
+use std::{ffi::CString, ptr::NonNull};
 use z3_sys::*;
 pub use z3_sys::{AstKind, GoalPrec, SortKind};
 
@@ -130,7 +130,7 @@ pub struct Solver<'ctx> {
 // `Model::new()` which handles Z3 refcounting properly.
 pub struct Model<'ctx> {
     ctx: &'ctx Context,
-    z3_mdl: Z3_model,
+    z3_mdl: NonNull<_Z3_model>,
 }
 
 /// Context for solving optimization queries.

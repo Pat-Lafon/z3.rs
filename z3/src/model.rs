@@ -1,6 +1,7 @@
 use ast::Ast;
 use std::ffi::CStr;
 use std::fmt;
+use std::ptr::NonNull;
 use z3_sys::*;
 use Context;
 use Model;
@@ -8,19 +9,15 @@ use Optimize;
 use Solver;
 
 impl<'ctx> Model<'ctx> {
-    unsafe fn wrap(ctx: &'ctx Context, z3_mdl: Z3_model) -> Model<'ctx> {
-        Z3_model_inc_ref(ctx.z3_ctx, z3_mdl);
+    unsafe fn wrap(ctx: &'ctx Context, z3_mdl: NonNull<_Z3_model>) -> Model<'ctx> {
+        Z3_model_inc_ref(ctx.z3_ctx.as_ptr(), z3_mdl.as_ptr());
         Model { ctx, z3_mdl }
     }
 
     pub fn of_solver(slv: &Solver<'ctx>) -> Option<Model<'ctx>> {
         unsafe {
-            let m = Z3_solver_get_model(slv.ctx.z3_ctx, slv.z3_slv);
-            if m.is_null() {
-                None
-            } else {
-                Some(Self::wrap(slv.ctx, m))
-            }
+            let m = Z3_solver_get_model(slv.ctx.z3_ctx.as_ptr(), slv.z3_slv.as_ptr());
+            NonNull::new(m).map(|m| Self::wrap(slv.ctx, m))
         }
     }
 
@@ -40,7 +37,12 @@ impl<'ctx> Model<'ctx> {
         unsafe {
             Model::wrap(
                 dest,
-                Z3_model_translate(self.ctx.z3_ctx, self.z3_mdl, dest.z3_ctx),
+                NonNull::new(Z3_model_translate(
+                    self.ctx.z3_ctx.as_ptr(),
+                    self.z3_mdl.as_ptr(),
+                    dest.z3_ctx.as_ptr(),
+                ))
+                .unwrap(),
             )
         }
     }
